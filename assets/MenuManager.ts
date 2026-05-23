@@ -17,4 +17,7 @@ export default class MenuManager extends cc.Component {
     public toMenu() {
         cc.director.loadScene("Menu");
     }
+    public goToLeaderboard() {
+        cc.director.loadScene("Leaderboard"); // 確保名稱與場景檔名一致
+    }
 }

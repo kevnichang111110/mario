@@ -6,11 +6,15 @@ export default class GameManager extends cc.Component {
     @property(cc.Label) scoreLabel: cc.Label = null;
     @property(cc.Label) lifeLabel: cc.Label = null;
     @property(cc.Label) statusLabel: cc.Label = null; 
+    @property(cc.Label) timerLabel: cc.Label = null; 
 
     @property(cc.Node) playerNode: cc.Node = null;
-    @property
-    fallBoundary: number = -350;
+    @property fallBoundary: number = -350;
 
+    // --- 新增音效屬性 ---
+    @property(cc.AudioClip) gameOverSound: cc.AudioClip = null; 
+
+    private timeLeft: number = 300; 
     private score: number = 0;
     private lives: number = 3;
     private isInvincible: boolean = false;
@@ -28,42 +32,50 @@ export default class GameManager extends cc.Component {
         }
 
         if (this.statusLabel) this.statusLabel.node.active = false;
+        
+        this.startTimer();
     }
 
     start() {
         this.updateUI();
     }
 
-    // 新增：讓 PlayerController 可以檢查遊戲是否結束
-    public getIsGameOver() {
-        return this.isGameOver;
+    private startTimer() {
+        this.schedule(this.updateTimer, 1);
     }
 
-    update(dt) {
-        if (this.isInvincible || this.isGameOver) return;
-        if (this.playerNode && this.playerNode.y < this.fallBoundary) {
-            this.playerHit();
+    private updateTimer() {
+        if (this.isGameOver) return;
+        this.timeLeft--;
+        this.updateUI();
+        if (this.timeLeft <= 0) {
+            this.timeLeft = 0;
+            this.executeGameOver(); 
         }
+    }
+
+    private updateUI() {
+        if (this.lifeLabel) this.lifeLabel.string = "LIFE " + this.lives;
+        if (this.scoreLabel) this.scoreLabel.string = "SCORE " + this.score;
+        if (this.timerLabel) this.timerLabel.string = "TIME " + this.timeLeft;
     }
 
     public levelWin() {
         if (this.isGameOver) return;
         this.isGameOver = true;
-
-        cc.log("Level Clear!");
+        this.unschedule(this.updateTimer);
         cc.audioEngine.stopMusic();
 
+        this.score += (this.lives * this.timeLeft); 
+        this.saveScoreToLeaderboard(this.score); 
+        this.updateUI();
+
         if (this.statusLabel) {
-            this.statusLabel.string = "GAME WIN";
+            this.statusLabel.string = "GAME WIN\nSCORE " + this.score;
             this.statusLabel.node.active = true;
         }
-
         this.freezePlayer();
-
-        // 統一在這裡處理通關後的場景切換
-        this.scheduleOnce(() => {
-            cc.director.loadScene("Menu"); 
-        }, 3.0);
+        this.scheduleOnce(() => { cc.director.loadScene("Menu"); }, 3.0);
     }
 
     public playerHit() {
@@ -73,24 +85,58 @@ export default class GameManager extends cc.Component {
         this.lives--;
         this.updateUI();
 
+        // 💡 如果掉下懸崖，手動叫 PlayerController 播放受傷音效
+        const pc = this.playerNode ? this.playerNode.getComponent("PlayerController") : null;
+        if (pc && pc.hurtSound) {
+            cc.audioEngine.playEffect(pc.hurtSound, false);
+        }
+
         if (this.lives <= 0) {
             this.executeGameOver();
             return;
         }
 
-        const pc = this.playerNode ? this.playerNode.getComponent("PlayerController") : null;
-        if (pc) pc.respawn();
+        if (pc) {
+            pc.respawn();
+        } else {
+            this.safeRespawnPlayer();
+        }
 
-        this.scheduleOnce(() => {
-            this.isInvincible = false;
-        }, 1.0);
+        this.scheduleOnce(() => { this.isInvincible = false; }, 1.0);
+    }
+
+    private executeGameOver() {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+
+        cc.log("GAME OVER!");
+        this.unschedule(this.updateTimer);
+        
+        // 1. 停止主背景音樂
+        cc.audioEngine.stopMusic(); 
+
+        // 2. 播放 Game Over 專屬音效
+        if (this.gameOverSound) {
+            cc.audioEngine.playEffect(this.gameOverSound, false);
+        }
+
+        if (this.statusLabel) {
+            this.statusLabel.string = "GAME OVER";
+            this.statusLabel.node.active = true;
+        }
+
+        const pc = this.playerNode ? this.playerNode.getComponent("PlayerController") : null;
+        if (pc) {
+            pc.playDieAnimation(); 
+        }
+
+        this.scheduleOnce(() => { cc.director.loadScene("Menu"); }, 3.0);
     }
 
     private freezePlayer() {
         if (!this.playerNode) return;
         const rb = this.playerNode.getComponent(cc.RigidBody);
         if (rb) rb.linearVelocity = cc.v2(0, 0);
-        
         const pc = this.playerNode.getComponent("PlayerController");
         if (pc) pc.enabled = false;
     }
@@ -100,10 +146,7 @@ export default class GameManager extends cc.Component {
         this.updateUI();
     }
 
-    private updateUI() {
-        if (this.lifeLabel) this.lifeLabel.string = "Life: " + this.lives;
-        if (this.scoreLabel) this.scoreLabel.string = "Score: " + this.score;
-    }
+    public getIsGameOver() { return this.isGameOver; }
 
     private safeRespawnPlayer() {
         this.scheduleOnce(() => {
@@ -114,35 +157,20 @@ export default class GameManager extends cc.Component {
             }
         }, 0);
     }
-    // GameManager.ts
 
-    private executeGameOver() {
-        if (this.isGameOver) return;
-        this.isGameOver = true;
+    private saveScoreToLeaderboard(newScore: number) {
+        let data = cc.sys.localStorage.getItem('mario_leaderboard');
+        let list = data ? JSON.parse(data) : [];
+        list.push(newScore);
+        list.sort((a, b) => b - a);
+        if (list.length > 5) list = list.slice(0, 5);
+        cc.sys.localStorage.setItem('mario_leaderboard', JSON.stringify(list));
+    }
 
-        cc.log("執行 Game Over 邏輯");
-        cc.audioEngine.stopMusic(); // 停止背景音樂
-
-        // 1. 顯示 GAME OVER 字樣
-        if (this.statusLabel) {
-            this.statusLabel.string = "GAME OVER";
-            this.statusLabel.node.active = true;
+    update(dt) {
+        if (this.isInvincible || this.isGameOver) return;
+        if (this.playerNode && this.playerNode.y < this.fallBoundary) {
+            this.playerHit();
         }
-
-        // 2. 讓玩家執行「死亡動畫與物理屏蔽」
-        const pc = this.playerNode.getComponent("PlayerController");
-        if (pc) {
-            pc.playDieAnimation(); // 呼叫玩家死亡方法
-        }
-
-        // 3. 播放遊戲結束音效 (確保你在編輯器有拉進去)
-        // 建議在 PlayerController 或 GameManager 裡播放
-        // 這裡示範在 GameManager 播放，假設你有屬性 gameOverSound
-        // cc.audioEngine.playEffect(this.gameOverSound, false);
-
-        // 4. 3秒後切換
-        this.scheduleOnce(() => {
-            cc.director.loadScene("Menu");
-        }, 3.0);
     }
 }
