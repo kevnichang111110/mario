@@ -1334,7 +1334,7 @@
     },
     "component": "",
     "_componentId": "8596cghFy5C/LwLOL7PN4/H",
-    "handler": "toGameScene",
+    "handler": "toGameScene2",
     "customEventData": ""
   },
   {

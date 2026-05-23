@@ -12,7 +12,9 @@ export default class MenuManager extends cc.Component {
     public toGameScene() {
         cc.director.loadScene("game"); // 確保跟你之前的場景檔名一致
     }
-
+    public toGameScene2() {
+        cc.director.loadScene("game2"); // 確保跟你之前的場景檔名一致
+    }
     // 回到主選單
     public toMenu() {
         cc.director.loadScene("Menu");
