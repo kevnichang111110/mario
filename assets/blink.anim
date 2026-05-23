@@ -1,0 +1,43 @@
+{
+  "__type__": "cc.AnimationClip",
+  "_name": "blink",
+  "_objFlags": 0,
+  "_native": "",
+  "_duration": 1.1666666666666667,
+  "sample": 6,
+  "speed": 1,
+  "wrapMode": 2,
+  "curveData": {
+    "comps": {
+      "cc.Sprite": {
+        "spriteFrame": [
+          {
+            "frame": 0,
+            "value": {
+              "__uuid__": "f8cc4da9-19e3-4fa5-951c-93b3d6a52f1e"
+            }
+          },
+          {
+            "frame": 0.3333333333333333,
+            "value": {
+              "__uuid__": "e9c40636-2264-4ba0-ac08-7a67ae121730"
+            }
+          },
+          {
+            "frame": 0.6666666666666666,
+            "value": {
+              "__uuid__": "9a8d96ef-feff-4db8-b8c1-444c90b13b15"
+            }
+          },
+          {
+            "frame": 1,
+            "value": {
+              "__uuid__": "a6f5a6e4-8faf-434f-93f2-d0f363e68f99"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "events": []
+}

@@ -1,4 +1,4 @@
-const {ccclass, property} = cc._decorator;
+const { ccclass, property } = cc._decorator;
 
 @ccclass
 export default class GameManager extends cc.Component {
@@ -13,21 +13,20 @@ export default class GameManager extends cc.Component {
     playerNode: cc.Node = null;
 
     @property
-    fallBoundary: number = 0; // 設定掉到多深算死亡
+    fallBoundary: number = -350;
 
     private score: number = 0;
     private lives: number = 3;
-    private respawnPos: cc.Vec2 = cc.v2(0, 0); // 用來儲存重生位置
+    private isInvincible: boolean = false;
+    private respawnPos: cc.Vec2 = cc.v2(0, 0);
 
     onLoad() {
-        // 啟動引擎
-        let physicsManager = cc.director.getPhysicsManager();
+        const physicsManager = cc.director.getPhysicsManager();
         physicsManager.enabled = true;
         physicsManager.gravity = cc.v2(0, -1000);
 
         cc.director.getCollisionManager().enabled = true;
 
-        // --- 新增：紀錄初始位置作為重生點 ---
         if (this.playerNode) {
             this.respawnPos = cc.v2(this.playerNode.x, this.playerNode.y);
         }
@@ -38,24 +37,41 @@ export default class GameManager extends cc.Component {
     }
 
     update(dt) {
-        // --- 新增：每一幀檢查馬力歐是否掉出地圖 ---
+        if (this.isInvincible) return;
+
         if (this.playerNode && this.playerNode.y < this.fallBoundary) {
             this.playerHit();
         }
     }
 
-    // 提供給其他腳本呼叫的方法 (例如碰到敵人、掉進洞裡)
     public playerHit() {
+        if (this.isInvincible) return;
+
+        this.isInvincible = true;
+
         this.lives--;
         this.updateUI();
-        
+        cc.log("玩家受傷，剩餘生命: " + this.lives);
+
         if (this.lives <= 0) {
             cc.log("Game Over!");
-            // 遊戲結束，重新載入場景
-            cc.director.loadScene("game"); 
-        } else {
-            this.respawnPlayer();
+            this.scheduleOnce(() => {
+                cc.director.loadScene("Menu");
+            }, 0);
+            return;
         }
+
+        const pc = this.playerNode ? this.playerNode.getComponent("PlayerController") : null;
+        if (pc) {
+            pc.respawn();
+        } else {
+            this.safeRespawnPlayer();
+        }
+
+        this.scheduleOnce(() => {
+            this.isInvincible = false;
+            cc.log("無敵時間結束");
+        }, 1.0);
     }
 
     public addScore(points: number) {
@@ -64,20 +80,21 @@ export default class GameManager extends cc.Component {
     }
 
     private updateUI() {
-        if (this.scoreLabel) this.scoreLabel.string = "Score: " + this.score;
-        if (this.lifeLabel) this.lifeLabel.string = "Life: " + this.lives;
+        if (this.scoreLabel) this.scoreLabel.string = "Life: " + this.lives;
+        if (this.lifeLabel) this.lifeLabel.string = "Score: " + this.score;
     }
 
-    private respawnPlayer() {
-        // 1. 將位置移回重生點
-        this.playerNode.setPosition(this.respawnPos);
+    private safeRespawnPlayer() {
+        if (!this.playerNode) return;
 
-        // 2. 關鍵：重置物理速度 (重要！)
-        // 如果不歸零，馬力歐會帶著墜落的速度在起點繼續往下衝
-        let rb = this.playerNode.getComponent(cc.RigidBody);
-        if (rb) {
-            rb.linearVelocity = cc.v2(0, 0); // 速度歸零
-            rb.angularVelocity = 0;          // 旋轉速度歸零
-        }
+        this.scheduleOnce(() => {
+            this.playerNode.setPosition(this.respawnPos);
+
+            const rb = this.playerNode.getComponent(cc.RigidBody);
+            if (rb) {
+                rb.linearVelocity = cc.v2(0, 0);
+                rb.angularVelocity = 0;
+            }
+        }, 0);
     }
 }
