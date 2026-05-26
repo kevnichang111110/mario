@@ -1,5 +1,5 @@
 const {ccclass, property} = cc._decorator;
-
+import FirebaseManager from "./FirebaseManager";
 @ccclass
 export default class LeaderboardView extends cc.Component {
     @property(cc.Label) scoreListLabel: cc.Label = null;
@@ -20,5 +20,13 @@ export default class LeaderboardView extends cc.Component {
 
     backToMenu() {
         cc.director.loadScene("Menu");
+    }
+    async start() {
+        let scores = await FirebaseManager.instance.getTopScores();
+        let str = "";
+        scores.forEach((data, index) => {
+            str += `${index + 1}. ${data.username} - ${data.score}\n`;
+        });
+        this.scoreListLabel.string = str;
     }
 }

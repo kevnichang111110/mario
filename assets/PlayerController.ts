@@ -130,6 +130,7 @@ export default class PlayerController extends cc.Component {
         }
 
         if (otherCollider.tag === 4) {
+            contact.disabled = true;
             this.reachGoal();
             return;
         }
@@ -207,19 +208,38 @@ export default class PlayerController extends cc.Component {
     reachGoal() {
         let gm = this.gameManagerNode.getComponent("GameManager");
         if (gm.getIsGameOver()) return; 
+
         gm.levelWin(); 
+        
         cc.audioEngine.stopMusic(); 
         if (this.levelClearSound) {
             cc.audioEngine.playEffect(this.levelClearSound, false);
         }
+        
+        // 1. 立即停止移動指令
         this._walkDir = 0;
-        this._rb.linearVelocity = cc.v2(0, 0);
-        this._rb.type = cc.RigidBodyType.Static; 
+        this.enabled = false; // 禁用腳本邏輯 (停止 update 中的速度賦值)
+
+        // 2. 立即將速度歸零並關閉重力 (防止這一幀掉下去)
+        if (this._rb) {
+            this._rb.linearVelocity = cc.v2(0, 0);
+            this._rb.gravityScale = 0; 
+        }
+
+        // 3. 【關鍵修正】延遲到下一幀將剛體設為 Static
+        // 這樣可以避開物理引擎的計算鎖定，確保馬力歐被「釘」在原地
+        this.scheduleOnce(() => {
+            if (this._rb) {
+                this._rb.linearVelocity = cc.v2(0, 0);
+                this._rb.type = cc.RigidBodyType.Static; 
+            }
+        }, 0);
+        
+        // 4. 強制切換回 idle
         if (this._anim) {
             this._anim.stop();
             this._anim.play('idle');
         }
-        this.enabled = false; 
     }
 
     update(dt) {

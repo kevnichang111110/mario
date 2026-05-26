@@ -1,5 +1,5 @@
 const { ccclass, property } = cc._decorator;
-
+import FirebaseManager from "./FirebaseManager";
 @ccclass
 export default class GameManager extends cc.Component {
 
@@ -67,8 +67,16 @@ export default class GameManager extends cc.Component {
         cc.audioEngine.stopMusic();
 
         this.score += (this.lives * this.timeLeft); 
+        FirebaseManager.instance.uploadScore(this.score);
         this.saveScoreToLeaderboard(this.score); 
         this.updateUI();
+
+        if (FirebaseManager.instance.currentUser) {
+            cc.log("已登入，正在上傳分數...");
+            FirebaseManager.instance.uploadScore(this.score);
+        } else {
+            cc.log("訪客模式，不紀錄分數至排行榜。");
+        }
 
         if (this.statusLabel) {
             this.statusLabel.string = "GAME WIN\nSCORE " + this.score;

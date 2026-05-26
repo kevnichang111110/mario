@@ -1,7 +1,7 @@
 {
-  "title": "NewProject",
+  "title": "mario",
   "packageName": "org.cocos2d.demo",
-  "startScene": "",
+  "startScene": "3c86ee53-21fb-4a5b-82b6-03ec3172956e",
   "excludeScenes": [],
   "orientation": {
     "landscapeRight": true,
@@ -15,7 +15,7 @@
   "mainCompressionType": "default",
   "mainIsRemote": false,
   "optimizeHotUpdate": false,
-  "md5Cache": true,
+  "md5Cache": false,
   "nativeMd5Cache": true,
   "encryptJs": true,
   "xxteaKey": "1e6261dd-3a79-47",
