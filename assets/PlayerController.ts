@@ -26,7 +26,7 @@ export default class PlayerController extends cc.Component {
     private _isJumping: boolean = false;
     private _anim: cc.Animation = null;
     private _initialPos: cc.Vec2 = null;
-
+    private _hasReachedGoal: boolean = false; 
     public isInvincible: boolean = false;
 
     onLoad() {
@@ -130,7 +130,11 @@ export default class PlayerController extends cc.Component {
         }
 
         if (otherCollider.tag === 4) {
-            contact.disabled = true;
+            contact.disabled = true; 
+
+            // --- 關鍵修正 2：如果已經觸發過，直接跳出 ---
+            if (this._hasReachedGoal) return;
+            this._hasReachedGoal = true;
             this.reachGoal();
             return;
         }
@@ -299,6 +303,7 @@ export default class PlayerController extends cc.Component {
 
     // --- 修正重生邏輯：強制縮小 ---
     respawn() {
+        this._hasReachedGoal = false;
         this.scheduleOnce(() => {
             if (!this._rb) return;
             

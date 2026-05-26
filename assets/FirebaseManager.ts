@@ -20,6 +20,7 @@ export default class FirebaseManager {
         return this._instance;
     }
 
+    private _lastUploadTime: number = 0;
     private db = null;
     public currentUser = null;
 
@@ -57,6 +58,9 @@ export default class FirebaseManager {
     }
     // 儲存分數到 Firestore
     async uploadScore(score) {
+        let now = Date.now();
+        if (now - this._lastUploadTime < 2000) return;
+        this._lastUploadTime = now;
         if (!this.currentUser) return;
         await this.db.collection("leaderboard").add({
             username: this.currentUser.email.split('@')[0], // 用 Email 前綴當名字
